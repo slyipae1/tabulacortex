@@ -1,0 +1,101 @@
+# Instruction 
+
+You are analyzing an Excel sheet to extract table structure information. Based on the provided data and style information, please identify the table components and return a JSON object with the following structure:
+
+```json
+{{
+    "table_name": "string or null - the title/name of the table if present",
+    "table_idx": [list of row indices where table name appears],
+    "columns": {{
+        "structure": "nested dict representing column hierarchy if nested, simple dict if flat",
+        "column_idx": [list of row indices that contain column names]
+    }},
+    "meta_data": {{
+        "key1": "value1 or null if empty",
+        "key2": "value2 or null if empty"
+    }},
+    "meta_idx": [list of row indices containing metadata],
+    "agg_meta_data": {{
+        "key1": "value1, formula, or null if empty - aggregation metadata"
+    }},
+    "agg_meta_idx": [list of row indices containing aggregation metadata with formulas],
+    "table_type": "one of: 1D, 1D_2level, 1D_3level, 2D, 2D_converted_1D, 2D_converted_1D_2level, complex, complex_converted_1D, etc.",
+    "row_names": [list of row names if this is a 2D table that cannot be collapsed],
+    "additional_note": "optional description for complex structures"
+}}
+```
+
+Guidelines:
+- table_name: Look for title rows, often in the first few rows
+- columns: Identify column headers, may be nested (multiple header rows)
+- meta_data: Extract form fields like "填报单位", "填报日期", "单位" etc.
+- agg_meta_data: Metadata associated with formulas or aggregations
+- table_type: Classify the table structure
+- For 2D tables, try to determine if they can be meaningfully converted to 1D
+
+# Example
+For a sheet with the following structure (all values are fictional demo data):
+```
+Row 1: 2025 年零售门店销售汇总表（示例数据）
+Row 2: 运营部： 2025年1月10日
+Row 3: 序号,门店,地区,品类,销售额,销售额,销售额,销售额,,
+Row 4: ,,,,,线上,线上,线下,线下,,
+Row 5: ,,,,,Q1,Q2,Q1,Q2,,
+Row 102: 备注：总门店数 12，总订单数 1034。
+Row 103: 制表人：示例 审核人：示例 联系电话：000-0000-0000
+Row 104: 注：1. 品类：食品、日用品、电子产品；2. 销售额单位为元。
+Row 105: 3. 本表为完全虚构的演示数据。
+```
+
+Expected output:
+```json
+{{
+    "table_name": "2025 年零售门店销售汇总表（示例数据）",
+    "table_idx": [1],
+    "columns": {{
+        "structure": {{
+            "序号": null,
+            "门店": null,
+            "地区": null,
+            "品类": null,
+            "销售额": {{
+                "线上": {{
+                    "Q1": null,
+                    "Q2": null
+                }},
+                "线下": {{
+                    "Q1": null,
+                    "Q2": null
+                }}
+            }}
+        }},
+        "column_idx": [3, 4, 5]
+    }},
+    "meta_data": {{
+        "填报单位": "运营部",
+        "填报日期": "2025年1月10日",
+        "制表人": "示例",
+        "审核人": "示例",
+        "联系电话": "000-0000-0000",
+        "注": "1. 品类：食品、日用品、电子产品；2. 销售额单位为元；3. 本表为完全虚构的演示数据。"
+    }},
+    "meta_idx": [2, 103, 104, 105],
+    "agg_meta_data": {{
+        "总门店数": null,
+        "总订单数": null
+    }},
+    "agg_meta_idx": [102],
+    "table_type": "1D_3level",
+    "row_names": [],
+    "additional_note": "This is a fictional retail sales form with 3-level nested column headers. The main data area (rows 6-101) contains one record per store. The footer contains aggregation summaries and form metadata."
+}}
+```
+
+---
+
+# CUrrent Task:
+```json
+{sheet_data}
+```
+
+**You do not need too much thinking for this task. **

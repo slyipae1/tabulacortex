@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local environment and secrets
+.env
+.venv/
+venv/
+
+# Runtime artifacts created by the demo
+uploads/
+temp/
+created_DBs/
+result.csv
+*.sqlite
+*.db
+*.log
+
+# OS
+.DS_Store

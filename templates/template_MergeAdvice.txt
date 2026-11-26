@@ -1,0 +1,91 @@
+# Task: Database Table Merge Analysis
+
+You are analyzing a database schema to identify opportunities for table merging and optimization.
+
+By default, one table corresponds to one sheet. Your task is to evaluate if there's any need for merging tables and formulate merge plans.
+
+## Database Schema:
+```json
+{db_schema}
+```
+
+## File Summary:
+```json
+{file_summary}
+```
+
+## Table Analysis:
+```json
+{table_analysis}
+```
+
+## Instructions:
+
+Analyze the database schema and provide merge suggestions in the following JSON format:
+
+```json
+{{
+    "merge_suggestions": [
+        {{
+            "merge_type": "merge table",
+            "sheets": [
+                ["file_name", "sheet_name"],
+                ["file_name", "sheet_name"]
+            ],
+            "db_tables": ["table1", "table2"],
+            "suggestion": "" // Natural language explanation with bullet points
+        }},
+        {{
+            "merge_type": "merge column", 
+            "raw_col_paths": [
+                ["file_name", "sheet_name", "column1"],
+                ["file_name", "sheet_name", "column2"]
+            ],
+            "db_columns": ["table_name.column1", "table_name.column2"],
+            "suggestion": ""
+        }}
+    ],
+    "overall_assessment": "Summary of merge opportunities and recommendations",
+    "confidence": "high|medium|low",
+    "reasoning": "Overall reasoning for the recommendations"
+}}
+```
+
+## Merge Types and Actions:
+
+Any merging involves these possible actions:
+- **Deletion**: Remove redundant DB tables or columns
+- **Creation/Renaming**: Create new tables/columns or rename existing ones  
+- **Transformation**: Change column mappings and data transformations
+
+### Table-wise Merging ("merge table"):
+
+1. **Vertical Concatenation**: Tables with identical structures
+   - *Example: "product_list_page1" & "product_list_page2" with same columns*
+   - *Actions: Delete separate tables, create unified table, add source distinguishing column*
+
+2. **Vertical with Source Identification**: Similar structures needing origin tracking
+   - *Example: "product_2022" & "product_2023" → add "year" column*
+   - *Actions: Merge tables, create new "year" column, update column mappings*
+
+3. **Structure Consolidation**: Similar structures with some different columns
+   - *Example: "product_basic" & "product_extended" where extended has extra "discount_info"*
+   - *Actions: Create unified table structure, handle optional columns*
+
+### Column-wise Merging ("merge column"):
+
+4. **Column Consolidation**: Columns representing similar concepts with different granularity
+   - *Example: Table with "60-70岁", "70-80岁" columns → merge into "age_group" column*
+   - *Actions: Delete individual age columns, create unified "age_group" + "count" columns*
+
+5. **Temporal Consolidation**: Time-series columns that can be normalized
+   - *Example: "Q1_sales", "Q2_sales", "Q3_sales" → merge into "quarter" + "sales_amount"*
+   - *Actions: Delete quarterly columns, create "quarter" and "sales_amount" columns*
+
+## Output Requirements:
+
+- Focus on practical merging opportunities that improve data organization
+- Provide specific, actionable suggestions with bullet points
+- Identify the exact sheets and tables involved in each merge
+- Explain the transformation strategy clearly
+- Consider data integrity and relationship preservation

@@ -1,0 +1,176 @@
+# Schema Update Execution Task
+
+You are executing a specific action following the planned steps to modify a database schema using available tools.
+
+## Action with steps to Execute:
+```json
+{action_content}
+```
+
+## Current Schema:
+```json
+{current_schema}
+```
+
+**Schema Format Reference**:
+
+```json
+{{
+    "db_name": "database_name",
+    "db_tables": [
+        {{
+            "table_id": "table_1", 
+            "table_name": "table_name",
+            "columns_mapping": [
+                {{
+                    "column_id": "col_1_1",
+                    "column_name": "column_name", 
+                    "original_column_xlsx": [
+                        {{
+                            "col_path": ["file_name", "sheet_name", "column_path"],
+                            "transform_for_DB": "ORIGINAL|FIXED: <value>"
+                        }},
+                        ...
+                    ],
+                    "datatype": "TEXT|INTEGER|REAL|DATE|...",
+                    "col_constraints": ["NOT NULL", "UNIQUE", "PRIMARY KEY", ...]
+                }}
+            ]
+        }},
+        ...
+    ],
+    "foreign_keys": [
+        ["source_table", "source_fk", "referred_table", "referred_fk"],
+        ...
+    ]
+}}
+```
+
+## Your Task:
+Execute the action steps using the available tools. Return a JSON array of tool calls in order:
+
+```json
+[
+    {{
+        "tool": "tool_function_name",
+        "kwargs": {{ 
+            "argument": // value in the required data type
+        }}
+    }},
+    ...
+]
+```
+
+## Available Tools and Parameters:
+
+1. **delete_table_tool**
+   - `table_identifier` (str): table_id or table_name to delete
+
+2. **create_table_tool**
+   - `table_entry` (Dict): **COMPLETE** table entry with table_id, table_name, columns_mapping
+
+3. **merge_table_tool**
+   - `table_identifier1` (str): First table to merge
+   - `table_identifier2` (str): Second table to merge  
+   - `table_identifier_new` (str): Name for the new merged table
+
+4. **delete_column_tool**
+   - `table_identifier` (str): table_id or table_name
+   - `column_identifier` (str): column_id or column_name to delete
+
+5. **create_column_tool**
+   - `table_identifier` (str): table_id or table_name
+   - `column_entry` (Dict): **COMPLETE** column entry with all required fields
+
+6. **merge_column_tool**
+   - `table_identifier` (str): table_id or table_name
+   - `column_identifier1` (str): First column to merge
+   - `column_identifier2` (str): Second column to merge
+   - `column_identifier_new` (str): Name for the new merged column
+   - `transform_for_DB1` (str): ORIGINAL: the transform_for_DB for First column in the merged column, default is ORIGINAL
+   - `transform_for_DB2` (str): ORIGINAL: the transform_for_DB for Second column in the merged column, default is ORIGINAL
+
+7. **add_foreign_keys_tool**
+   - `new_foreign_keys` (List[List[str]]): List of foreign key relationships to add
+
+8. **update_whole_foreign_keys_tool**
+   - `new_whole_foreign_keys` (List[List[str]]): **COMPLETE** replacement foreign keys
+
+9. **update_db_name_tool**
+   - `new_db_name` (str): New database name
+
+10. **update_table_name_tool**
+   - `table_identifier` (str): table_id or table_name to update
+   - `new_table_name` (str): New table name
+
+11. **update_column_tool**
+   - `table_identifier` (str): table_id or table_name
+   - `column_identifier` (str): column_id or column_name to update
+   - `field_name` (str): the field to be updated, can ONLY be one of ["column_name", "col_constraints", "datatype", "original_column_xlsx"]
+   - `new_value` (str | List[str] | List[Dict]): the new value to be replaced
+
+
+## Example of create new column hwne merging two tables:
+Previous step has merge two table products_2022 and products_2023 into products_combined, this step instruction is as follows:
+
+```
+Step 2: Create new column 'year' in table 'products_combined', using tool 'create_column_tool'. Should use the ["products_data_2022.xlsx", "ProductSheet"] and ["products_data_2023.xlsx", "ProductSheet"] as col_path for new column's original_column_xlsx respectively; set transform_for_DB to FIXED values: '2022' and '2023' respectively.
+```
+
+Expected output is:
+
+```json
+[
+    ... // previous exec entries
+    {{
+        "tool": "create_column_tool",
+        "kwargs": {{
+            "table_identifier": "products_combined",
+            "column_entry": {{
+                    "column_id": "newcol_22_23",
+                    "column_name": "year", 
+                    "original_column_xlsx": [
+                        {{
+                            "col_path": ["products_data_2022.xlsx", "ProductSheet"],
+                            "transform_for_DB": "FIXED: 2022"
+                        }},
+                        {{
+                            "col_path": ["products_data_2023.xlsx", "ProductSheet"],
+                            "transform_for_DB": "FIXED: 2023"
+                        }}
+                    ],
+                    "datatype": "INTEGER",
+                    "col_constraints": ["NOT NULL"]
+                }}
+        }}
+    }},
+    ...
+]
+```
+
+## Example for merging two columns
+The step instruction is as follow:
+
+```
+Step 1: Merge column 'age_60_70' and column 'age_70_80' into new column 'age_group' in table 'demographics', using tool `merge_column_tool`. Should set transform_for_DB to 'FIXED: 60-70' and 'FIXED: 70-80' respectively
+```
+
+Expected output is:
+
+```json
+[
+    {{
+        "tool": "merge_column_tool",
+        "kwargs": {{
+            "table_identifier": "demographics",
+            "column_identifier1": "age_60_70",
+            "column_identifier2": "age_70_80", 
+            "column_identifier_new": "age_group",
+            "transform_for_DB1": "FIXED: 60-70",
+            "transform_for_DB2": "FIXED: 70-80"
+        }}
+    }}
+]
+```
+
+Execute all steps in the correct sequence using the appropriate tools.

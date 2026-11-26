@@ -1,0 +1,37 @@
+# Instruction
+
+You are analyzing database tables within a single Excel file to identify foreign key relationships.
+
+Task: Identify clear foreign key relationships between tables that belong to the same file.
+
+Guidelines:
+1. Only suggest foreign keys for CLEAR relationships
+2. Prefer naturally unique identifiers: 身份证号, 银行卡号, 社保卡号, etc.
+3. Typical clear relationship example:
+   - One table with basic personal info (身份证号, 姓名, 年龄, 地址)
+   - Another table with activities/transactions for same people (身份证号, 活动类型, 金额)
+4. Tables must be from the same file to potentially handle the same set of entities
+5. Avoid creating foreign keys for weak relationships or different entity types
+6. Only use columns that are naturally unique and meaningful as identifiers
+
+Please analyze the provided DDLs and return foreign key relationships in this JSON format (if no foreign key. return empty list):
+```json
+{{
+    "foreign_keys": [
+        ["table_name_1", "column_name_1", "table_name_2", "column_name_2"],
+        ...
+    ]
+}}
+```
+
+Each foreign key entry means: table_name_1.column_name_1 references table_name_2.column_name_2. So will need two entries if mutual is valid.
+
+---
+
+# Current Task
+File: {file_name}
+
+DDL Statements: 
+```sql
+{ddls}
+```

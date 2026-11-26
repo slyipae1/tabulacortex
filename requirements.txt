@@ -1,0 +1,10 @@
+# Python 3.10+ is recommended: current smolagents/gradio releases require it.
+# Versions below are ranges based on imports found in the source; they were not
+# runtime-verified in the initial repository cleanup pass.
+gradio>=5.0,<7.0
+pandas>=2.2,<4.0
+openpyxl>=3.1,<4.0
+smolagents>=1.0,<2.0
+python-dotenv>=1.0,<2.0
+
+# sqlite3 is part of the Python standard library.

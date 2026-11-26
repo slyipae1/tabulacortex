@@ -1,0 +1,61 @@
+# 指令
+
+您正在根据Excel数据为一个工作表组设计数据库schema。
+
+任务：为工作表组生成数据库schema映射，包括column映射、table名称、primary key和DDL。
+
+指导原则：
+1. 所有column、table和database名称应遵循原始语言类型， **且不可中间含有空格**
+2. 处理嵌套列时使用"_"连接（例如，"parent_child"）
+3. designed_db_table_name 应基于以下优先级：
+   - 优先级1：table_name（如果存在且有意义的）
+   - 优先级2：redesigned_sheet_name/original_sheet_name
+   - 优先级3：file_name（用于区分相同的工作表）
+   - 注意：它们按顺序在"sheet_table_s"中提供：file_name, original_sheet_name, redesigned_sheet_name, table_name
+4. designed_db_table_name 必须对每个sheet保持唯一。在"tables"中先重复原提供信息，然后增加最后一个来返回
+5. primary key 偏好：
+   - 优先选择自然常理常识的唯一标识符：身份证号、银行卡号、社保卡号等
+   - 如果没有上述更好选项，才考虑类似简单的行索引功能的column如"序号"
+   - 如果以上都不存在，则跳过定义primary key
+6. 为每个column定义合适的数据类型
+7. 如果明确指示（例如：必填 → NOT NULL，数字位数、数值范围等在常识范围内可以确定）则添加约束， 若没有明确指明，倾向于不添加任何constraints
+8. 生成完整的DDL，并使用<TABLE_NAME>占位符
+9. 所有table和column名称应确保：
+    - 反映工作表的内容/目的
+    - 简洁明了
+    - 使用与原始内容**相同的语言**（例如，若原表大部分为中文，使用中文命名；if English is dorminant, use English；其他语言类似）
+    - 避免包含"Sheet1"、"Sheet2"、"Column"、"Table"等通用术语
+10. 在"columns_mapping"的"original_column_xlsx"中指明设计的column与原本columns_structure中哪一个最内层的column相对应
+    - 对于嵌套列，使用list从外到内指明，例如：(parent,child) 
+11. "datatype" 不要指明范围
+
+注：本任务不需要太多提前思考的过程，只需先了解表格大致内容以确定primary key，便可以开始输出最终答案，因为最终答案输出天然符合思考过程。
+
+请按以下JSON格式提供schema：
+```json
+{{
+    "sheet_group_id": "输入中的sheet_group_id",
+    "tables": [
+        ["file_name", "original_sheet_name", "redesigned_sheet_name", "table_name", "the new `designed_db_table_name`"],
+        ...
+    ],
+    "columns_mapping": [
+        {{
+            "column_name": "设计的column的名称",
+            "original_column_xlsx": ["nested parent column level_1", ... "nested parent column level_n", "original column name"],
+            "datatype": "TEXT|INTEGER|REAL|DATE|...",
+            "col_constraints": ["NOT NULL", "UNIQUE", ...] // added only if expictly specified in the original column name 
+        }},
+        ...
+    ],
+    "DDL": "CREATE TABLE <TABLE_NAME> (\n    column1 datatype constraints,\n    column2 datatype constraints,\n    ...\n    PRIMARY KEY (column_name)\n);"
+}}
+```
+
+---
+
+# 当前任务
+工作表组信息：
+```json
+{sheet_group}
+```

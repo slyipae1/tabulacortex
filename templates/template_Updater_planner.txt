@@ -1,0 +1,152 @@
+# Action Planning Task
+
+You are analyzing a user request to modify a database schema and need to break it down into specific action blocks.
+
+## User Message: 
+{user_message}
+
+## Conversation History:
+```json
+{conversation_history}
+```
+
+## Detected Differences in Schema:
+{differences_ER}
+
+## Detected Differences in Schema-File map (usually about Merging Modifications):
+{differences_map}
+
+## Current Schema:
+```json
+{current_schema}
+```
+
+**Schema Format Reference**:
+
+```json
+{{
+    "db_name": "database_name",
+    "db_tables": [
+        {{
+            "table_id": "table_1", 
+            "table_name": "table_name",
+            "columns_mapping": [
+                {{
+                    "column_id": "col_1_1",
+                    "column_name": "column_name", 
+                    "original_column_xlsx": [
+                        {{
+                            "col_path": ["file_name", "sheet_name", "column_path"],
+                            "transform_for_DB": "ORIGINAL|FIXED: <value>"
+                        }},
+                        ...
+                    ],
+                    "datatype": "TEXT|INTEGER|REAL|DATE|...",
+                    "col_constraints": ["NOT NULL", "UNIQUE", "PRIMARY KEY", ...]
+                }}
+            ]
+        }},
+        ...
+    ],
+    "foreign_keys": [
+        ["source_table", "source_fk", "referred_table", "referred_fk"],
+        ...
+    ]
+}}
+```
+
+## Available Action Types:
+- **update db_name**: Change database name
+- **update table name**: Rename a table
+- **update column**: Rename a column; Update constraint; update datatype. 
+- **update foreign_key**: Add/remove/modify foreign key relationships
+- **merge tables without distinguishing column**: Combine tables with identical data
+- **merge tables with distinguishing column**: Combine tables while preserving source information
+- **merge columns**: Combine multiple columns into one
+
+## Available Tools:
+- **delete_table_tool(cur_schema, table_identifier)** - Delete table by ID or name
+- **create_table_tool(cur_schema, table_entry)** - Create new table (requires complete entry)
+- **merge_table_tool(cur_schema, table_identifier1, table_identifier2, table_identifier_new)** - Merge the two into new table (will merge column with same name, directly keep columns only appearing in one of the tables, aggregate the 'original_column_xlsx' field accordingly)
+- **delete_column_tool(cur_schema, table_identifier, column_identifier)** - Delete column
+- **create_column_tool(cur_schema, table_identifier, column_entry)** - Create new column (requires complete entry)
+- **merge_column_tool(cur_schema, table_identifier, column_identifier1, column_identifier2, column_identifier_new, transform_for_DB1="ORIGINAL", transform_for_DB2="ORIGINAL")** - Merge the two into new column (will directly aggregate the 'original_column_xlsx' field accordingly, i.e. keeping each col_path; will set transform_for_DB accordingly)
+- **add_foreign_keys_tool(cur_schema, new_foreign_keys)** - Add new foreign key relationships
+- **update_whole_foreign_keys_tool(cur_schema, new_whole_foreign_keys)** - Refplace with a whole new foreign_keys field
+- **update_db_name_tool(cur_schema, new_db_name)** - Update database name
+- **update_column_tool(cur_schema, table_identifier, column_identifier, field_name, new_value: str | List[str] | List[Dict]) - update column name, col_constraints, datatype, original_column_xlsx
+- **update_table_name_tool(cur_schema, table_identifier, new_table_name) - update table name
+## Task:
+Analyze the user request and plan the sequence of actions needed. Return a JSON array of action blocks:
+
+```json
+[
+    {{
+        "action": "one of the action types above",
+        "targets": [
+            "a list of db_tables or db_columns that will affect",
+            f"{{db_table}}.{{db_column}}",  // column format
+            f"{{db_table}}",  // table format
+        ],
+        "steps": [
+            "Step 1: Detailed description of what needs to be done. Each step should only call one tool",
+            "Step 2: Next step in the process",
+            "Step 3: sequential steps as needed",
+            ...
+        ]
+    }},
+    ...
+]
+
+```
+
+## Guidelines:
+A typical thinking process is: 
+    - (1) find all the explict changes from user message or differences.
+    - (2) Prelare action blcok for each changes and regular steps
+    - (3) Check for any implicit changes and  and refine steps
+    
+### For Simple Updates:
+- Usually one action block handle one update intent
+- Must ensure one action step use one tool
+- Be specific about what to change and to what value
+- Remember to update foreign key for the update, which is sometimes implicit and easily forgotten 
+
+### For Merging Operations:
+
+**Merge Columns Example:**
+Mote:
+    - user message indicate to merge columns 'age_60_70' and 'age_70_80' of table 'demographics' into new column 'age_group' and use the corresponding column value as merged value.
+```json
+{{
+    "action": "merge columns",
+    "targets": [
+        "demographics.age_60_70",
+        "demographics.age_70_80"
+    ],
+    "steps": [
+        "Step 1: Merge column 'age_60_70' and column 'age_70_80' into new column 'age_group' in table 'demographics', using tool `merge_column_tool`. Should set transform_for_DB to 'FIXED: 60-70' and 'FIXED: 70-80' respectively"
+    ]
+}}
+```
+
+**Merge Tables Example:**
+Note: 
+    - user message indicate to merge tables 'products_2022' and 'products_2023' into new table 'products_combined' with a distinguishing column 'year' and use the corresponding year in table name as merged value. Though the two tables have different schema, but some are semantically equivalent, should merge.
+    - table 'products_2022' has columns: 'product_ID', 'unit_price'
+    - table 'products_2023' has columns: 'product_NO', 'unit_price'
+```json
+{{
+    "action": "merge tables with distinguishing column",
+    "targets": [
+        "products_2022",
+        "products_2023"
+    ],
+    "steps": [
+        "Step 1: Merge tables 'products_2022' and 'products_2023' into new table 'products_combined', using tool `merge_table_tool`",
+        "Step 2: Merge columns 'product_NO' and 'product_ID' into 'product_ID' in table 'products_combined', using tool 'merge_column_tool'",
+        "Step 3: Create new column 'year' in table 'products_combined', using tool 'create_column_tool'. Should use the ["products_data_2022.xlsx", "ProductSheet"] and ["products_data_2023.xlsx", "ProductSheet"] as col_path for new column's original_column_xlsx respectively, note that col_path will have sheet_name as last item because it is for distinguishing tables; set transform_for_DB to FIXED values: '2022' and '2023' respectively",
+        "Step 4: Add foreign key products_combined.product_ID refers sales.product_ID"
+    ]
+}}
+```
